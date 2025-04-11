@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>服务器监控仪表盘</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 800px;
+        }
+        h2 { color: #333; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>服务器资源监控</h2>
+        <canvas id="metricsChart"></canvas>
+    </div>
+
+    <script>
+        let chart;
+        
+        // 初始化图表
+        function initChart() {
+            const ctx = document.getElementById('metricsChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],  // 时间轴
+                    datasets: [{
+                        label: 'CPU使用率 (%)',
+                        data: [],
+                        borderColor: '#ff6384',
+                        fill: false
+                    }, {
+                        label: '内存使用率 (%)',
+                        data: [],
+                        borderColor: '#36a2eb',
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { title: { display: true, text: '时间' } },
+                        y: { 
+                            min: 0,
+                            max: 100,
+                            title: { display: true, text: '使用率 (%)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 加载数据
+        async function loadData() {
+            try {
+                const response = await fetch('../system.log');
+                const logData = await response.text();
+                const lines = logData.trim().split('\n');
+                
+                const cpuData = [];
+                const memData = [];
+                const timeLabels = [];
+                
+                lines.forEach((line, index) => {
+                    const [cpu, mem] = line.split(',');
+                    cpuData.push(parseFloat(cpu));
+                    memData.push(parseFloat(mem));
+                    timeLabels.push(`T${index + 1}`);
+                });
+
+                chart.data.labels = timeLabels;
+                chart.data.datasets[0].data = cpuData;
+                chart.data.datasets[1].data = memData;
+                chart.update();
+            } catch (error) {
+                console.log('数据加载失败:', error);
+            }
+        }
+
+        // 每10秒刷新一次
+        initChart();
+        setInterval(loadData, 10000);
+        loadData(); // 初始加载
+    </script>
+</body>
+</html>
